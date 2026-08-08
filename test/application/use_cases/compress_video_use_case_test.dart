@@ -1,88 +1,225 @@
+import 'dart:async';
+
 import 'package:test/test.dart';
 import 'package:kilovideo/application/use_cases/compress_video_use_case.dart';
 import 'package:kilovideo/domain/entities/video_info.dart';
 import 'package:kilovideo/domain/ports/ffmpeg_runner.dart';
 import 'package:kilovideo/domain/ports/video_probe.dart';
+import 'package:kilovideo/domain/strategies/target_percent_strategy.dart';
 import 'package:kilovideo/domain/strategies/target_size_strategy.dart';
 
-/// Stub de `VideoProbe` para tests: devuelve siempre la misma info.
+// ─────────────── Stubs ───────────────
+
 class _StubProbe implements VideoProbe {
-  const _StubProbe(this._info);
+  _StubProbe(this._info, {this.shouldThrow = false});
   final VideoInfo _info;
+  final bool shouldThrow;
+
+  String? lastProbedPath;
+  int probeCalls = 0;
 
   @override
-  Future<VideoInfo> probe(String path) async => _info;
+  Future<VideoInfo> probe(String path) async {
+    probeCalls++;
+    lastProbedPath = path;
+    if (shouldThrow) throw StateError('probe falló');
+    return _info;
+  }
 }
 
-/// Stub de `FfmpegRunner` que captura los argumentos recibidos.
 class _StubRunner implements FfmpegRunner {
-  final List<String> receivedArgs = <String>[];
+  _StubRunner({this.result = const FfmpegSuccess()});
   final FfmpegResult result;
 
-  _StubRunner({this.result = const FfmpegSuccess()});
-
-  @override
-  Future<FfmpegResult> run(List<String> args) async {
-    receivedArgs.addAll(args);
-    return result;
-  }
+  List<String> receivedArgs = <String>[];
+  int runCalls = 0;
 
   @override
   Stream<double> get progress => const Stream<double>.empty();
+
+  @override
+  Future<FfmpegResult> run(List<String> args) async {
+    runCalls++;
+    receivedArgs = args;
+    return result;
+  }
 }
+
+// ─────────────── Helpers ───────────────
+
+const _baseInfo = VideoInfo(
+  filePath: '/tmp/movie.mp4',
+  duration: Duration(minutes: 10),
+  originalBitrateKbps: 5000,
+  originalSizeMb: 100,
+  codec: 'h264',
+);
+
+// ─────────────── Tests ───────────────
 
 void main() {
   group('CompressVideoUseCase', () {
-    const info = VideoInfo(
-      filePath: '/tmp/test.mp4',
-      duration: Duration(minutes: 10),
-      originalBitrateKbps: 5000,
-      originalSizeMb: 100,
-      codec: 'h264',
-    );
-
-    test('TargetSizeStrategy 30 MB llama ffmpeg con bitrate y audio', () async {
-      final probe = _StubProbe(info);
+    test('devuelve FfmpegSuccess cuando todo sale bien', () async {
+      final probe = _StubProbe(_baseInfo);
       final runner = _StubRunner();
       final useCase = CompressVideoUseCase(
         videoProbe: probe,
         ffmpegRunner: runner,
       );
-      const strategy = TargetSizeStrategy(targetMb: 30.0);
 
       final result = await useCase(
-        inputPath: '/tmp/test.mp4',
-        strategy: strategy,
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetSizeStrategy(targetMb: 30.0),
       );
 
-      // 30 MB * 1024 KB * 8 / 600 s = 409.6 kbps total.
-      // 409.6 - 64 (audio) = 345.6 kbps video.
       expect(result, isA<FfmpegSuccess>());
-      expect(runner.receivedArgs, contains('-b:v'));
-      expect(runner.receivedArgs, contains('345.6k'));
-      expect(runner.receivedArgs, contains('-b:a'));
-      expect(runner.receivedArgs, contains('64.0k'));
-      expect(runner.receivedArgs, contains('-c:v'));
-      expect(runner.receivedArgs, contains('libx264'));
+      expect(probe.probeCalls, 1);
+      expect(probe.lastProbedPath, '/tmp/movie.mp4');
+      expect(runner.runCalls, 1);
     });
 
-    test('propaga FfmpegFailure si runner falla', () async {
-      final probe = _StubProbe(info);
+    test('usa audio 64 kbps para TargetSizeStrategy', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await useCase(
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetSizeStrategy(targetMb: 30.0),
+      );
+
+      final audioIdx = runner.receivedArgs.indexOf('-b:a');
+      expect(audioIdx, isNonNegative);
+      expect(runner.receivedArgs[audioIdx + 1], '64.0k');
+    });
+
+    test('usa audio 128 kbps para TargetPercentStrategy', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await useCase(
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetPercentStrategy(percentCompression: 50),
+      );
+
+      final audioIdx = runner.receivedArgs.indexOf('-b:a');
+      expect(audioIdx, isNonNegative);
+      expect(runner.receivedArgs[audioIdx + 1], '128.0k');
+    });
+
+    test('construye outputPath con sufijo _compressed', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await useCase(
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetSizeStrategy(targetMb: 30.0),
+      );
+
+      expect(runner.receivedArgs.last, '/tmp/movie_compressed.mp4');
+    });
+
+    test('pasa bitrate video calculado por strategy al runner', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      // 50% de 5000 = 2500 kbps.
+      await useCase(
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetPercentStrategy(percentCompression: 50),
+      );
+
+      final videoIdx = runner.receivedArgs.indexOf('-b:v');
+      expect(runner.receivedArgs[videoIdx + 1], '2500.0k');
+    });
+
+    test('pasa bitrate 345.6k con TargetSizeStrategy 30 MB', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await useCase(
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetSizeStrategy(targetMb: 30.0),
+      );
+
+      final videoIdx = runner.receivedArgs.indexOf('-b:v');
+      expect(runner.receivedArgs[videoIdx + 1], '345.6k');
+    });
+
+    test('propaga excepción del probe y no llama ffmpeg', () async {
+      final probe = _StubProbe(_baseInfo, shouldThrow: true);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await expectLater(
+        () => useCase(
+          inputPath: '/tmp/movie.mp4',
+          strategy: const TargetSizeStrategy(targetMb: 30.0),
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(runner.runCalls, 0);
+    });
+
+    test('propaga ArgumentError del strategy y no llama ffmpeg', () async {
+      final probe = _StubProbe(_baseInfo);
+      final runner = _StubRunner();
+      final useCase = CompressVideoUseCase(
+        videoProbe: probe,
+        ffmpegRunner: runner,
+      );
+
+      await expectLater(
+        () => useCase(
+          inputPath: '/tmp/movie.mp4',
+          strategy: const TargetPercentStrategy(percentCompression: -1),
+        ),
+        throwsA(isA<ArgumentError>()),
+      );
+      expect(runner.runCalls, 0);
+    });
+
+    test('devuelve FfmpegFailure cuando runner falla', () async {
+      final probe = _StubProbe(_baseInfo);
       final runner = _StubRunner(
-        result: const FfmpegFailure(exitCode: 1, message: 'error'),
+        result: const FfmpegFailure(exitCode: 1, message: 'codec error'),
       );
       final useCase = CompressVideoUseCase(
         videoProbe: probe,
         ffmpegRunner: runner,
       );
-      const strategy = TargetSizeStrategy(targetMb: 30.0);
 
       final result = await useCase(
-        inputPath: '/tmp/test.mp4',
-        strategy: strategy,
+        inputPath: '/tmp/movie.mp4',
+        strategy: const TargetSizeStrategy(targetMb: 30.0),
       );
 
       expect(result, isA<FfmpegFailure>());
+      final failure = result as FfmpegFailure;
+      expect(failure.exitCode, 1);
+      expect(failure.message, 'codec error');
     });
   });
 }
