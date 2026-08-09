@@ -1,6 +1,7 @@
 // Copyright 2026 KiloVideo. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kilovideo/di/providers.dart';
@@ -35,6 +36,7 @@ class _HomePageState extends ConsumerState<HomePage> {
   );
   CompressionMode _mode = CompressionMode.size;
   bool _busy = false;
+  bool _dragHover = false;
   String? _resultado;
 
   Future<void> _comprimir() async {
@@ -97,24 +99,38 @@ class _HomePageState extends ConsumerState<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('KiloVideo')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            VideoInputForm(
-              pathController: _pathController,
-              targetMbController: _targetMbController,
-              percentController: _percentController,
-              crfController: _crfController,
-              mode: _mode,
-              onModeChanged: (m) => setState(() => _mode = m),
+      body: DropTarget(
+        onDragEntered: (_) => setState(() => _dragHover = true),
+        onDragExited: (_) => setState(() => _dragHover = false),
+        onDragDone: (detail) {
+          setState(() => _dragHover = false);
+          if (detail.files.isNotEmpty) {
+            _pathController.text = detail.files.first.path;
+          }
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          color: _dragHover ? Colors.blue.withValues(alpha: 0.05) : null,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                VideoInputForm(
+                  pathController: _pathController,
+                  targetMbController: _targetMbController,
+                  percentController: _percentController,
+                  crfController: _crfController,
+                  mode: _mode,
+                  onModeChanged: (m) => setState(() => _mode = m),
+                ),
+                const SizedBox(height: 16),
+                CompressButton(busy: _busy, onPressed: _comprimir),
+                const SizedBox(height: 24),
+                if (_resultado != null) ResultCard(message: _resultado!),
+              ],
             ),
-            const SizedBox(height: 16),
-            CompressButton(busy: _busy, onPressed: _comprimir),
-            const SizedBox(height: 24),
-            if (_resultado != null) ResultCard(message: _resultado!),
-          ],
+          ),
         ),
       ),
     );

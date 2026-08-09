@@ -53,8 +53,6 @@ class VideoInputForm extends StatefulWidget {
 }
 
 class _VideoInputFormState extends State<VideoInputForm> {
-  bool _dragHover = false;
-
   @override
   void initState() {
     super.initState();
@@ -134,55 +132,29 @@ class _VideoInputFormState extends State<VideoInputForm> {
 
   Widget _buildFilePicker() {
     final path = widget.pathController.text.trim();
-    return DragTarget<String>(
-      onWillAcceptWithDetails: (_) {
-        setState(() => _dragHover = true);
-        return true;
-      },
-      onLeave: (_) => setState(() => _dragHover = false),
-      onAcceptWithDetails: (details) {
-        setState(() => _dragHover = false);
-        widget.pathController.text = details.data;
-      },
-      builder: (context, candidate, rejected) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: _dragHover ? Colors.blue : Colors.grey,
-              width: 2,
-              style: _dragHover ? BorderStyle.solid : BorderStyle.solid,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey, width: 2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              path.isEmpty ? 'Ningún archivo seleccionado' : path,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: path.isEmpty ? Colors.grey : null),
             ),
-            borderRadius: BorderRadius.circular(8),
-            color: _dragHover ? Colors.blue.withValues(alpha: 0.05) : null,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      path.isEmpty ? 'Ningún archivo seleccionado' : path,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: path.isEmpty ? Colors.grey : null,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: _pickFile,
-                    icon: const Icon(Icons.folder_open),
-                    label: const Text('Seleccionar'),
-                  ),
-                ],
-              ),
-            ],
+          const SizedBox(width: 8),
+          FilledButton.icon(
+            onPressed: _pickFile,
+            icon: const Icon(Icons.folder_open),
+            label: const Text('Seleccionar'),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
