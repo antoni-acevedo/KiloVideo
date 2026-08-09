@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 ///
 /// **Patrón:** Stateless Widget.
 /// **Por qué:** encapsula el spinner cuando la operación está en curso.
-/// Reusado en HomePage, BatchPage, ContextMenu.
 class CompressButton extends StatelessWidget {
   /// Crea el botón.
   const CompressButton({
@@ -28,15 +27,33 @@ class CompressButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
-      onPressed: busy ? null : onPressed,
-      child: busy
-          ? const SizedBox(
-              height: 20,
-              width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-          : Text(label),
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: FilledButton(
+        onPressed: busy ? null : onPressed,
+        style: FilledButton.styleFrom(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: busy
+            ? const SizedBox(
+                height: 22,
+                width: 22,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: Colors.white,
+                ),
+              )
+            : Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
     );
   }
 }

@@ -1,6 +1,7 @@
 // Copyright 2026 KiloVideo. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kilovideo/application/use_cases/compress_video_use_case.dart';
 import 'package:kilovideo/domain/ports/ffmpeg_runner.dart';
@@ -33,3 +34,6 @@ final compressVideoUseCaseProvider = Provider<CompressVideoUseCase>((ref) {
 final compressionStrategyProvider = StateProvider<CompressionStrategy>((ref) {
   return const TargetSizeStrategy(targetMb: 25.0);
 });
+
+/// Provider del tema de la app (claro/oscuro).
+final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);

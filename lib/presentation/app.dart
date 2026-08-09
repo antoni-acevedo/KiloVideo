@@ -2,23 +2,34 @@
 // SPDX-License-Identifier: MIT
 
 import 'package:flutter/material.dart';
-import 'package:kilovideo/presentation/pages/home_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:kilovideo/di/providers.dart';
+import 'package:kilovideo/presentation/pages/shell_page.dart';
 
 /// Root widget de la app.
-class KiloVideoApp extends StatelessWidget {
+class KiloVideoApp extends ConsumerWidget {
   /// Crea la app.
   const KiloVideoApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final mode = ref.watch(themeModeProvider);
     return MaterialApp(
       title: 'KiloVideo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2196F3)),
         useMaterial3: true,
       ),
-      home: const HomePage(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2196F3),
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: mode,
+      home: const ShellPage(),
     );
   }
 }

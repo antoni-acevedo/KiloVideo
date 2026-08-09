@@ -38,9 +38,7 @@ class _FilePickerSectionState extends State<FilePickerSection> {
   }
 
   void _remove(String path) {
-    widget.onFilesChanged(
-      widget.files.where((p) => p != path).toList(),
-    );
+    widget.onFilesChanged(widget.files.where((p) => p != path).toList());
   }
 
   void _clear() => widget.onFilesChanged(const []);
@@ -103,14 +101,7 @@ class _FilePickerSectionState extends State<FilePickerSection> {
                 ],
               ],
             ),
-            if (widget.files.isEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Arrastra y suelta uno o más videos aquí',
-                style: Theme.of(context).textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ] else ...[
+            if (widget.files.isNotEmpty) ...[
               const SizedBox(height: 8),
               ...widget.files.map(_buildFileTile),
             ],

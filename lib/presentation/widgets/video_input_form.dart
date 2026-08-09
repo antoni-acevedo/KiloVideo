@@ -17,6 +17,9 @@ enum CompressionMode {
 /// **Patrón:** Stateful (presentación).
 /// **Por qué:** los sliders requieren rebuild al cambiar. StatelessWidget
 /// no se entera de mutaciones del `TextEditingController`.
+///
+/// **Nota:** el modo se selecciona desde el sidebar de la app. Este
+/// widget solo renderiza el input correspondiente al modo recibido.
 class VideoInputForm extends StatefulWidget {
   /// Crea el formulario.
   const VideoInputForm({
@@ -25,7 +28,6 @@ class VideoInputForm extends StatefulWidget {
     required this.percentController,
     required this.crfController,
     required this.mode,
-    required this.onModeChanged,
   });
 
   /// Controller del campo de tamaño objetivo en MB.
@@ -39,9 +41,6 @@ class VideoInputForm extends StatefulWidget {
 
   /// Modo actual de compresión.
   final CompressionMode mode;
-
-  /// Callback al cambiar de modo.
-  final ValueChanged<CompressionMode> onModeChanged;
 
   @override
   State<VideoInputForm> createState() => _VideoInputFormState();
@@ -114,39 +113,10 @@ class _VideoInputFormState extends State<VideoInputForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SegmentedButton<CompressionMode>(
-          segments: const [
-            ButtonSegment(
-              value: CompressionMode.size,
-              label: Text('Tamaño'),
-              icon: Icon(Icons.straighten),
-            ),
-            ButtonSegment(
-              value: CompressionMode.percent,
-              label: Text('Porcentaje'),
-              icon: Icon(Icons.percent),
-            ),
-            ButtonSegment(
-              value: CompressionMode.crf,
-              label: Text('CRF'),
-              icon: Icon(Icons.tune),
-            ),
-          ],
-          selected: {widget.mode},
-          onSelectionChanged: (selection) =>
-              widget.onModeChanged(selection.first),
-        ),
-        const SizedBox(height: 16),
-        if (widget.mode == CompressionMode.size)
-          _buildSizeField()
-        else if (widget.mode == CompressionMode.percent)
-          _buildPercentSlider()
-        else
-          _buildCrfSlider(),
-      ],
-    );
+    return switch (widget.mode) {
+      CompressionMode.size => _buildSizeField(),
+      CompressionMode.percent => _buildPercentSlider(),
+      CompressionMode.crf => _buildCrfSlider(),
+    };
   }
 }
