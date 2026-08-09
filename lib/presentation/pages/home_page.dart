@@ -8,6 +8,7 @@ import 'package:kilovideo/domain/ports/ffmpeg_runner.dart';
 import 'package:kilovideo/domain/strategies/compression_strategy.dart';
 import 'package:kilovideo/domain/strategies/target_percent_strategy.dart';
 import 'package:kilovideo/domain/strategies/target_size_strategy.dart';
+import 'package:kilovideo/domain/strategies/tarjet_crf_strategy.dart';
 import 'package:kilovideo/presentation/widgets/compress_button.dart';
 import 'package:kilovideo/presentation/widgets/result_card.dart';
 import 'package:kilovideo/presentation/widgets/video_input_form.dart';
@@ -28,6 +29,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   );
   final TextEditingController _percentController = TextEditingController(
     text: '50',
+  );
+  final TextEditingController _crfController = TextEditingController(
+    text: '20',
   );
   CompressionMode _mode = CompressionMode.size;
   bool _busy = false;
@@ -74,6 +78,9 @@ class _HomePageState extends ConsumerState<HomePage> {
       case CompressionMode.percent:
         final percent = int.tryParse(_percentController.text.trim()) ?? 0;
         return TargetPercentStrategy(percentCompression: percent);
+      case CompressionMode.crf:
+        final crf = int.tryParse(_crfController.text.trim()) ?? 0;
+        return TargetCRFStrategy(tarjetCRF: crf);
     }
   }
 
@@ -82,6 +89,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     _pathController.dispose();
     _targetMbController.dispose();
     _percentController.dispose();
+    _crfController.dispose();
     super.dispose();
   }
 
@@ -98,6 +106,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               pathController: _pathController,
               targetMbController: _targetMbController,
               percentController: _percentController,
+              crfController: _crfController,
               mode: _mode,
               onModeChanged: (m) => setState(() => _mode = m),
             ),
