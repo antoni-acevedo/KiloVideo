@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=KiloVideo
+GenericName=Video Compressor
+Comment=Compress videos to a smaller size
+Exec=kilovideo %F
+Icon=kilovideo
+Terminal=false
+Categories=AudioVideo;Utility;
+MimeType=video/mp4;video/x-matroska;video/x-msvideo;video/quicktime;video/webm;
+Keywords=video;compress;ffmpeg;
+StartupNotify=true

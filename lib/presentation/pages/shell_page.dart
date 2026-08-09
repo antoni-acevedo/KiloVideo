@@ -15,7 +15,10 @@ import 'package:kilovideo/presentation/widgets/video_input_form.dart';
 /// Shell principal: sidebar + área de contenido.
 class ShellPage extends ConsumerStatefulWidget {
   /// Crea el shell.
-  const ShellPage({super.key});
+  const ShellPage({super.key, this.initialFiles = const []});
+
+  /// Archivos iniciales (vienen de CLI args o context menu).
+  final List<String> initialFiles;
 
   @override
   ConsumerState<ShellPage> createState() => _ShellPageState();
@@ -23,7 +26,7 @@ class ShellPage extends ConsumerStatefulWidget {
 
 class _ShellPageState extends ConsumerState<ShellPage> {
   String _selectedId = 'fixed';
-  List<String> _files = const [];
+  late List<String> _files = List<String>.from(widget.initialFiles);
   final TextEditingController _targetMbController = TextEditingController(
     text: '25',
   );
@@ -211,7 +214,66 @@ class _ShellPageState extends ConsumerState<ShellPage> {
         const Text('KiloVideo - Compresor de video para Linux.'),
         const SizedBox(height: 8),
         const Text('Versión 0.1.0'),
+        const SizedBox(height: 24),
+        _buildIntegrationCard(),
       ],
+    );
+  }
+
+  Widget _buildIntegrationCard() {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.extension),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Integración con menú contextual',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      Text(
+                        'Agrega KiloVideo al menú de Nautilus/GNOME Files.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () async {
+                final integration = ref.read(linuxIntegrationProvider);
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  final path = await integration.installNautilusScript();
+                  await integration.installDesktopFile();
+                  await integration.refreshAppDatabase();
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Instalado en: $path')),
+                  );
+                } on Object catch (e) {
+                  if (!mounted) return;
+                  messenger.showSnackBar(
+                    SnackBar(content: Text('Error: $e')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.install_desktop),
+              label: const Text('Instalar menú contextual'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

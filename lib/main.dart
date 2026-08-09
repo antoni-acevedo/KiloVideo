@@ -1,10 +1,25 @@
 // Copyright 2026 KiloVideo. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:kilovideo/presentation/app.dart';
 import 'package:window_manager/window_manager.dart';
+
+/// Filtra argumentos CLI que parezcan rutas a archivos de video.
+List<String> _filterVideoArgs(List<String> args) {
+  return args
+      .where((arg) => !arg.startsWith('-'))
+      .where((arg) => arg.endsWith('.mp4') ||
+          arg.endsWith('.mov') ||
+          arg.endsWith('.mkv') ||
+          arg.endsWith('.avi') ||
+          arg.endsWith('.webm') ||
+          arg.endsWith('.wmv'))
+      .toList();
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +38,11 @@ void main() async {
     await windowManager.setResizable(false);
   });
 
+  final initialFiles = _filterVideoArgs(Platform.executableArguments);
+
   runApp(
-    const ProviderScope(child: KiloVideoApp()),
+    ProviderScope(
+      child: KiloVideoApp(initialFiles: initialFiles),
+    ),
   );
 }

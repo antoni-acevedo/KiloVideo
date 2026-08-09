@@ -1,0 +1,27 @@
+#!/bin/bash
+# Script de Nautilus: "KiloVideo - Comprimir"
+# Aparece en el submenú Scripts del menú contextual de Nautilus.
+# Recibe rutas vía variable de entorno $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS.
+
+set -e
+
+# Busca el binario kilovideo en ubicaciones comunes.
+KILOVIDEO_BIN=""
+for candidate in \
+  "$HOME/.local/bin/kilovideo" \
+  "/usr/local/bin/kilovideo" \
+  "/usr/bin/kilovideo" \
+  "$(command -v kilovideo 2>/dev/null)"; do
+  if [ -x "$candidate" ]; then
+    KILOVIDEO_BIN="$candidate"
+    break
+  fi
+done
+
+if [ -z "$KILOVIDEO_BIN" ]; then
+  notify-send "KiloVideo" "Binario no encontrado en PATH. Compila con flutter build linux --release y cópialo a ~/.local/bin/" 2>/dev/null || true
+  exit 1
+fi
+
+# Pasa las rutas seleccionadas a kilovideo.
+exec "$KILOVIDEO_BIN" $NAUTILUS_SCRIPT_SELECTED_FILE_PATHS

@@ -10,6 +10,7 @@ import 'package:kilovideo/domain/strategies/compression_strategy.dart';
 import 'package:kilovideo/domain/strategies/target_size_strategy.dart';
 import 'package:kilovideo/infrastructure/ffmpeg/process_ffmpeg_runner.dart';
 import 'package:kilovideo/infrastructure/ffmpeg/process_video_probe.dart';
+import 'package:kilovideo/integration/linux_integration.dart';
 
 /// Provider del [FfmpegRunner]. Hoy: sistema. Mañana: AppImage bundled.
 final ffmpegRunnerProvider = Provider<FfmpegRunner>((ref) {
@@ -37,3 +38,6 @@ final compressionStrategyProvider = StateProvider<CompressionStrategy>((ref) {
 
 /// Provider del tema de la app (claro/oscuro).
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
+
+/// Provider del servicio de integración Linux.
+final linuxIntegrationProvider = Provider((ref) => LinuxIntegration());

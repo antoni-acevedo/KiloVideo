@@ -9,7 +9,10 @@ import 'package:kilovideo/presentation/pages/shell_page.dart';
 /// Root widget de la app.
 class KiloVideoApp extends ConsumerWidget {
   /// Crea la app.
-  const KiloVideoApp({super.key});
+  const KiloVideoApp({super.key, this.initialFiles = const []});
+
+  /// Archivos recibidos como argumentos CLI (context menu integration).
+  final List<String> initialFiles;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +32,7 @@ class KiloVideoApp extends ConsumerWidget {
         useMaterial3: true,
       ),
       themeMode: mode,
-      home: const ShellPage(),
+      home: ShellPage(initialFiles: initialFiles),
     );
   }
 }
