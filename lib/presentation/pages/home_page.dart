@@ -11,10 +11,11 @@ import 'package:kilovideo/domain/strategies/target_percent_strategy.dart';
 import 'package:kilovideo/domain/strategies/target_size_strategy.dart';
 import 'package:kilovideo/domain/strategies/tarjet_crf_strategy.dart';
 import 'package:kilovideo/presentation/widgets/compress_button.dart';
+import 'package:kilovideo/presentation/widgets/file_picker_section.dart';
 import 'package:kilovideo/presentation/widgets/result_card.dart';
 import 'package:kilovideo/presentation/widgets/video_input_form.dart';
 
-/// Página principal: formulario para comprimir un video.
+/// Página principal: formulario para comprimir videos.
 class HomePage extends ConsumerStatefulWidget {
   /// Crea la home page.
   const HomePage({super.key});
@@ -24,7 +25,7 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
-  final TextEditingController _pathController = TextEditingController();
+  List<String> _files = const [];
   final TextEditingController _targetMbController = TextEditingController(
     text: '25',
   );
@@ -40,10 +41,8 @@ class _HomePageState extends ConsumerState<HomePage> {
   String? _resultado;
 
   Future<void> _comprimir() async {
-    final path = _pathController.text.trim();
-
-    if (path.isEmpty) {
-      setState(() => _resultado = 'Error: ruta vacía');
+    if (_files.isEmpty) {
+      setState(() => _resultado = 'Error: sin archivos');
       return;
     }
 
@@ -57,18 +56,29 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     setState(() {
       _busy = true;
-      _resultado = 'Comprimiendo...';
+      _resultado = 'Comprimiendo ${_files.length} archivo(s)...';
     });
 
     final useCase = ref.read(compressVideoUseCaseProvider);
-    final result = await useCase(inputPath: path, strategy: strategy);
+    int ok = 0;
+    final List<String> errors = [];
+
+    for (final path in _files) {
+      final result = await useCase(inputPath: path, strategy: strategy);
+      switch (result) {
+        case FfmpegSuccess():
+          ok++;
+        case FfmpegFailure():
+          errors.add('${path.split('/').last}: ${result.message}');
+      }
+    }
 
     setState(() {
       _busy = false;
-      _resultado = switch (result) {
-        FfmpegSuccess() => '✓ Compresión exitosa',
-        FfmpegFailure() => '✗ Error: ${result.message}',
-      };
+      final summary = '✓ $ok/${_files.length} exitoso(s)';
+      _resultado = errors.isEmpty
+          ? summary
+          : '$summary\n${errors.join('\n')}';
     });
   }
 
@@ -88,11 +98,26 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   void dispose() {
-    _pathController.dispose();
     _targetMbController.dispose();
     _percentController.dispose();
     _crfController.dispose();
     super.dispose();
+  }
+
+  void _addDropped(List<String> paths) {
+    final List<String> accepted = paths
+        .map((p) => p.replaceFirst('file://', ''))
+        .where((p) {
+      final lower = p.toLowerCase();
+      return lower.endsWith('.mp4') ||
+          lower.endsWith('.mov') ||
+          lower.endsWith('.mkv') ||
+          lower.endsWith('.avi') ||
+          lower.endsWith('.webm');
+    }).toList();
+    if (accepted.isNotEmpty) {
+      setState(() => _files = [..._files, ...accepted]);
+    }
   }
 
   @override
@@ -104,9 +129,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         onDragExited: (_) => setState(() => _dragHover = false),
         onDragDone: (detail) {
           setState(() => _dragHover = false);
-          if (detail.files.isNotEmpty) {
-            _pathController.text = detail.files.first.path;
-          }
+          _addDropped(detail.files.map((f) => f.path).toList());
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -116,8 +139,12 @@ class _HomePageState extends ConsumerState<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                FilePickerSection(
+                  files: _files,
+                  onFilesChanged: (f) => setState(() => _files = f),
+                ),
+                const SizedBox(height: 16),
                 VideoInputForm(
-                  pathController: _pathController,
                   targetMbController: _targetMbController,
                   percentController: _percentController,
                   crfController: _crfController,

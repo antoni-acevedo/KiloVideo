@@ -60,12 +60,14 @@ class CompressVideoUseCase {
   ///
   /// **Por qué:** encapsular el detalle de flags. Si mañana cambiamos a
   /// libx264 con presets, solo cambia este método.
+  ///
+  /// El output se nombra con timestamp para nunca pisar un archivo previo.
   List<String> _buildArgs(
     String inputPath,
     double videoBitrateKbps,
     double audioBitrateKbps,
   ) {
-    final String outputPath = inputPath.replaceAll('.mp4', '_compressed.mp4');
+    final String outputPath = _generateOutputPath(inputPath);
     return FfmpegArgsBuilder()
         .overwrite()
         .input(inputPath)
@@ -76,4 +78,24 @@ class CompressVideoUseCase {
         .output(outputPath)
         .build();
   }
+
+  /// Genera una ruta de output con timestamp para no pisar archivos previos.
+  ///
+  /// `movie.mp4` → `movie_2026-08-08_103045_compressed.mp4`.
+  /// `video` → `video_2026-08-08_103045_compressed`.
+  String _generateOutputPath(String inputPath) {
+    final now = DateTime.now();
+    final stamp =
+        '${now.year}-${_pad(now.month)}-${_pad(now.day)}_'
+        '${_pad(now.hour)}${_pad(now.minute)}${_pad(now.second)}';
+    final dotIdx = inputPath.lastIndexOf('.');
+    if (dotIdx <= 0) {
+      return '${inputPath}_${stamp}_compressed';
+    }
+    final base = inputPath.substring(0, dotIdx);
+    final ext = inputPath.substring(dotIdx);
+    return '${base}_${stamp}_compressed$ext';
+  }
+
+  String _pad(int n) => n.toString().padLeft(2, '0');
 }

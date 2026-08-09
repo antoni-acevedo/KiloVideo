@@ -114,7 +114,7 @@ void main() {
       expect(runner.receivedArgs[audioIdx + 1], '128.0k');
     });
 
-    test('construye outputPath con sufijo _compressed', () async {
+    test('construye outputPath con timestamp y _compressed', () async {
       final probe = _StubProbe(_baseInfo);
       final runner = _StubRunner();
       final useCase = CompressVideoUseCase(
@@ -127,7 +127,9 @@ void main() {
         strategy: const TargetSizeStrategy(targetMb: 30.0),
       );
 
-      expect(runner.receivedArgs.last, '/tmp/movie_compressed.mp4');
+      final output = runner.receivedArgs.last;
+      // Formato: /tmp/movie_YYYY-MM-DD_HHMMSS_compressed.mp4
+      expect(output, matches(RegExp(r'^/tmp/movie_\d{4}-\d{2}-\d{2}_\d{6}_compressed\.mp4$')));
     });
 
     test('pasa bitrate video calculado por strategy al runner', () async {

@@ -1,4 +1,3 @@
-import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 /// Modo de compresión: tamaño exacto o porcentaje del original.
@@ -22,16 +21,12 @@ class VideoInputForm extends StatefulWidget {
   /// Crea el formulario.
   const VideoInputForm({
     super.key,
-    required this.pathController,
     required this.targetMbController,
     required this.percentController,
     required this.crfController,
     required this.mode,
     required this.onModeChanged,
   });
-
-  /// Controller del campo de ruta.
-  final TextEditingController pathController;
 
   /// Controller del campo de tamaño objetivo en MB.
   final TextEditingController targetMbController;
@@ -56,31 +51,18 @@ class _VideoInputFormState extends State<VideoInputForm> {
   @override
   void initState() {
     super.initState();
-    widget.pathController.addListener(_onAnyChange);
     widget.percentController.addListener(_onAnyChange);
     widget.crfController.addListener(_onAnyChange);
   }
 
   @override
   void dispose() {
-    widget.pathController.removeListener(_onAnyChange);
     widget.percentController.removeListener(_onAnyChange);
     widget.crfController.removeListener(_onAnyChange);
     super.dispose();
   }
 
   void _onAnyChange() => setState(() {});
-
-  Future<void> _pickFile() async {
-    const typeGroup = XTypeGroup(
-      label: 'Videos',
-      extensions: <String>['mp4', 'mov', 'mkv', 'avi', 'webm'],
-    );
-    final XFile? file = await openFile(acceptedTypeGroups: [typeGroup]);
-    if (file != null) {
-      widget.pathController.text = file.path;
-    }
-  }
 
   Widget _buildSizeField() {
     return TextField(
@@ -130,34 +112,6 @@ class _VideoInputFormState extends State<VideoInputForm> {
     );
   }
 
-  Widget _buildFilePicker() {
-    final path = widget.pathController.text.trim();
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey, width: 2),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              path.isEmpty ? 'Ningún archivo seleccionado' : path,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: path.isEmpty ? Colors.grey : null),
-            ),
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            onPressed: _pickFile,
-            icon: const Icon(Icons.folder_open),
-            label: const Text('Seleccionar'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -185,8 +139,6 @@ class _VideoInputFormState extends State<VideoInputForm> {
           onSelectionChanged: (selection) =>
               widget.onModeChanged(selection.first),
         ),
-        const SizedBox(height: 16),
-        _buildFilePicker(),
         const SizedBox(height: 16),
         if (widget.mode == CompressionMode.size)
           _buildSizeField()
